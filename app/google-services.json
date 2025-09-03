@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "502919445865",
+    "project_id": "ai-trip-73f3e",
+    "storage_bucket": "ai-trip-73f3e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:502919445865:android:d008d30849f3bd5df9d1f8",
+        "android_client_info": {
+          "package_name": "com.rubina.wastefoodmanagement"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "502919445865-6g79f5pjclnlvdo5urb0cp0k1olp1fva.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAu0PxnkjzEc9RWRVdkBS1CnzR1i7iOUo0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "502919445865-6g79f5pjclnlvdo5urb0cp0k1olp1fva.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
