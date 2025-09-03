@@ -1,3 +1,4 @@
+import AuthGuard from "@/components/AuthGuard";
 import { hashPassword } from "@/utils/hash";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRouter } from "expo-router";
@@ -92,154 +93,165 @@ export default function SignUp() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-    >
-      <View style={styles.container}>
-        {/* Back Button */}
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          style={styles.backBtnContainer}
-        >
-          <Ionicons name="arrow-back" size={28} color={Colors.black} />
-        </TouchableOpacity>
-
-        {/* Title */}
-        <View style={styles.textContainer}>
-          <Text style={styles.mainTitle}>Create Account</Text>
-          <Text style={styles.subTitle}>
-            Join us as an{" "}
-            <Text style={{ fontWeight: "bold", color: Colors.blue }}>
-              Admin, NGO, or Donor
-            </Text>
-          </Text>
-        </View>
-
-        {/* Inputs */}
-        <View style={styles.inputContainer}>
-          {/* Full Name */}
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>
-              Full Name <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.fullName && { borderColor: "red" }]}
-              placeholder="Enter your name"
-              value={fullName}
-              onChangeText={(text) => {
-                setFullName(text);
-                if (errors.fullName && text.trim()) {
-                  setErrors((prev: any) => ({ ...prev, fullName: undefined }));
-                }
-              }}
-            />
-            {errors.fullName && (
-              <Text style={styles.errorText}>{errors.fullName}</Text>
-            )}
-          </View>
-
-          {/* Email */}
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>
-              Email <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.email && { borderColor: "red" }]}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              value={email}
-              autoCapitalize="none"
-              onChangeText={(text) => {
-                setEmail(text);
-                if (errors.email) {
-                  if (/\S+@\S+\.\S+/.test(text)) {
-                    setErrors((prev: any) => ({ ...prev, email: undefined }));
-                  }
-                }
-              }}
-            />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
-            )}
-          </View>
-
-          {/* Password */}
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>
-              Password <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.password && { borderColor: "red" }]}
-              secureTextEntry
-              placeholder="Enter password"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (errors.password) {
-                  if (text.length >= 6) {
-                    setErrors((prev: any) => ({
-                      ...prev,
-                      password: undefined,
-                    }));
-                  }
-                }
-              }}
-            />
-            {errors.password && (
-              <Text style={styles.errorText}>{errors.password}</Text>
-            )}
-          </View>
-
-          {/* Role Selection */}
-          <Text style={[styles.label, { marginTop: 20 }]}>
-            Select Role <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={styles.roleRow}>
-            {roles.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.roleBtn, role === r && styles.roleBtnActive]}
-                onPress={() => setRole(r)}
-              >
-                <Text
-                  style={role === r ? styles.roleTextActive : styles.roleText}
-                >
-                  {r.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Sign Up */}
+    <AuthGuard>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.container}>
+          {/* Back Button */}
           <TouchableOpacity
-            style={styles.signUpButton}
-            onPress={OnCreateAccount}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            style={styles.backBtnContainer}
           >
-            <Text style={styles.signUpButtonText}>Sign Up</Text>
+            <Ionicons name="arrow-back" size={28} color={Colors.black} />
           </TouchableOpacity>
 
-          {/* Sign In */}
-          <View style={styles.signInContainer}>
-            <Text style={styles.signInText}>Already have an account?</Text>
-            <TouchableOpacity onPress={() => router.replace("/auth/sign-in")}>
-              <Text style={styles.signInLink}>Sign In</Text>
+          {/* Title */}
+          <View style={styles.textContainer}>
+            <Text style={styles.mainTitle}>Create Account</Text>
+            <Text style={styles.subTitle}>
+              Join us as an{" "}
+              <Text style={{ fontWeight: "bold", color: Colors.blue }}>
+                Admin, NGO, or Donor
+              </Text>
+            </Text>
+          </View>
+
+          {/* Inputs */}
+          <View style={styles.inputContainer}>
+            {/* Full Name */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>
+                Full Name <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.fullName && { borderColor: "red" },
+                ]}
+                placeholder="Enter your name"
+                value={fullName}
+                onChangeText={(text) => {
+                  setFullName(text);
+                  if (errors.fullName && text.trim()) {
+                    setErrors((prev: any) => ({
+                      ...prev,
+                      fullName: undefined,
+                    }));
+                  }
+                }}
+              />
+              {errors.fullName && (
+                <Text style={styles.errorText}>{errors.fullName}</Text>
+              )}
+            </View>
+
+            {/* Email */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>
+                Email <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={[styles.input, errors.email && { borderColor: "red" }]}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                value={email}
+                autoCapitalize="none"
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (errors.email) {
+                    if (/\S+@\S+\.\S+/.test(text)) {
+                      setErrors((prev: any) => ({ ...prev, email: undefined }));
+                    }
+                  }
+                }}
+              />
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              )}
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>
+                Password <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.password && { borderColor: "red" },
+                ]}
+                secureTextEntry
+                placeholder="Enter password"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (errors.password) {
+                    if (text.length >= 6) {
+                      setErrors((prev: any) => ({
+                        ...prev,
+                        password: undefined,
+                      }));
+                    }
+                  }
+                }}
+              />
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
+            </View>
+
+            {/* Role Selection */}
+            <Text style={[styles.label, { marginTop: 20 }]}>
+              Select Role <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={styles.roleRow}>
+              {roles.map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.roleBtn, role === r && styles.roleBtnActive]}
+                  onPress={() => setRole(r)}
+                >
+                  <Text
+                    style={role === r ? styles.roleTextActive : styles.roleText}
+                  >
+                    {r.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Sign Up */}
+            <TouchableOpacity
+              style={styles.signUpButton}
+              onPress={OnCreateAccount}
+            >
+              <Text style={styles.signUpButtonText}>Sign Up</Text>
             </TouchableOpacity>
+
+            {/* Sign In */}
+            <View style={styles.signInContainer}>
+              <Text style={styles.signInText}>Already have an account?</Text>
+              <TouchableOpacity onPress={() => router.replace("/auth/sign-in")}>
+                <Text style={styles.signInLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Bottom Image */}
+          <View style={styles.imageContainer}>
+            <Image
+              source={require("../../../assets/images/login-register.jpg")}
+              style={styles.image}
+              resizeMode="contain"
+            />
           </View>
         </View>
-
-        {/* Bottom Image */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={require("../../../assets/images/login-register.jpg")}
-            style={styles.image}
-            resizeMode="contain"
-          />
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </AuthGuard>
   );
 }
 
