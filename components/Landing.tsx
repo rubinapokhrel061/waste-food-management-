@@ -1,7 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React from "react";
 import {
   Image,
   StyleSheet,
@@ -10,26 +10,12 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Landing() {
   const router = useRouter();
-  const { width, height } = useWindowDimensions(); // For responsive design
-  const animation = useSharedValue(0); // For button animation
-
-  // Animation effect on mount
-  useEffect(() => {
-    animation.value = withSpring(1, { damping: 12, stiffness: 90 });
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: animation.value }],
-  }));
+  const { width, height } = useWindowDimensions();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,9 +39,7 @@ export default function Landing() {
             Reduce food waste and donate excess food to support communities in
             need.
           </Text>
-
-          {/* Call-to-Action Button */}
-          <Animated.View style={[styles.buttonContainer, animatedStyle]}>
+          <View style={[styles.buttonContainer]}>
             <TouchableOpacity
               style={styles.ctaButton}
               onPress={() => router.push("/auth/sign-in")}
@@ -70,7 +54,7 @@ export default function Landing() {
                 style={styles.buttonIcon}
               />
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -80,7 +64,7 @@ export default function Landing() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e4f5f3", // Solid background color
+    backgroundColor: "#e4f5f3",
   },
   heroContainer: {
     width: "100%",
@@ -96,7 +80,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent overlay
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     padding: 20,
     alignItems: "center",
   },

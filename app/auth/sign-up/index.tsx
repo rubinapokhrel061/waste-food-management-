@@ -56,7 +56,7 @@ export default function SignUp() {
 
   const OnCreateAccount = async () => {
     if (!validateForm()) return;
-    console.log(fullName, email, role);
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -64,7 +64,6 @@ export default function SignUp() {
         password
       );
       const user = userCredential.user;
-      console.log(userCredential);
 
       await setDoc(doc(db, "users", user.uid), {
         fullName,
@@ -88,7 +87,17 @@ export default function SignUp() {
         router.replace("/donor/home");
       }
     } catch (error: any) {
-      Toast.show({ type: "error", text1: error.message });
+      if (error.code === "auth/email-already-in-use") {
+        Toast.show({
+          type: "error",
+          text1: "Email already in use",
+          text2: "Please use a different email address.",
+        });
+      } else {
+        // Handle other errors
+        console.log(error);
+        Toast.show({ type: "error", text1: error.message });
+      }
     }
   };
 
@@ -102,7 +111,7 @@ export default function SignUp() {
         <View style={styles.container}>
           {/* Back Button */}
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => navigation.goBack()}
             activeOpacity={0.7}
             style={styles.backBtnContainer}
           >

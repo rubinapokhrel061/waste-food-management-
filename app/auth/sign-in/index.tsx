@@ -2,9 +2,11 @@ import AuthGuard from "@/components/AuthGuard";
 import { hashPassword } from "@/utils/hash";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNavigation, useRouter } from "expo-router";
+import { signInWithEmailAndPassword, updatePassword } from "firebase/auth";
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   updateDoc,
@@ -24,7 +26,7 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import { db } from "../../../configs/FirebaseConfig";
+import { auth, db } from "../../../configs/FirebaseConfig";
 import { Colors } from "../../../constants/Colors";
 
 const { width } = Dimensions.get("window");
@@ -56,28 +58,26 @@ export default function SignIn() {
     }
 
     try {
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", email));
-      const querySnapshot = await getDocs(q);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      console.log(userCredential);
+      const uid = userCredential?.user?.uid;
 
-      if (querySnapshot.empty) {
-        Toast.show({
-          type: "error",
-          text1: "User not found",
-          // position: "bottom",
-        });
+      const userDoc = await getDoc(doc(db, "users", uid));
+      if (!userDoc.exists()) {
+        Toast.show({ type: "error", text1: "User data not found" });
         return;
       }
 
-      const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
-      const enteredHash = hashPassword(password);
 
+      // Optional: Check hashed password if stored separately
+      const enteredHash = hashPassword(password);
       if (enteredHash !== userData?.password) {
-        Toast.show({
-          type: "error",
-          text1: "Invalid Password",
-        });
+        Toast.show({ type: "error", text1: "Invalid password" });
         return;
       }
 
@@ -85,6 +85,7 @@ export default function SignIn() {
       if (userData.role === "admin") router.replace("/admin/dashboard");
       else if (userData.role === "ngo") router.replace("/ngo/home");
       else router.replace("/donor/home");
+
       Toast.show({
         type: "success",
         text1: "Login Successfully",
@@ -93,16 +94,65 @@ export default function SignIn() {
       setErrors({});
     } catch (err: any) {
       console.log(err);
-      Toast.show({
-        type: "error",
-        text1: "Firebase Error",
-        text2: err.message,
-      });
+      if (err.code === "auth/invalid-credential") {
+        Toast.show({
+          type: "error",
+          text1: "Email or password does not match",
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          text2: err.message || "An error occurred during sign-in",
+        });
+      }
     }
   };
 
   // Handle Password Reset
-  const OnResetPassword = async () => {
+  // const OnResetPassword = async () => {
+  //   if (!email || !newPassword) {
+  //     setErrors({
+  //       email: !email ? "Email is required" : undefined,
+  //       password: !newPassword ? "New password is required" : undefined,
+  //     });
+  //     return;
+  //   }
+
+  //   try {
+  //     // const q = query(collection(db, "users"), where("email", "==", email));
+  //     // const querySnapshot = await getDocs(q);
+
+  //     // if (querySnapshot.empty) {
+  //     //   Toast.show({ type: "error", text1: "User not found" });
+  //     //   return;
+  //     // }
+  //     const re = await sendPasswordResetEmail(auth, email);
+  //     console.log(re);
+  //     // const userDoc = querySnapshot.docs[0];
+
+  //     // const hashedPassword = hashPassword(newPassword);
+
+  //     // await updateDoc(doc(db, "users", userDoc.id), {
+  //     //   password: hashedPassword,
+  //     // });
+
+  //     Toast.show({ type: "success", text1: "Password updated successfully" });
+  //     setResetMode(false);
+  //     setPassword("");
+  //     setNewPassword("");
+  //     setErrors({});
+  //   } catch (err: any) {
+  //     console.log(err);
+  //     Toast.show({
+  //       type: "error",
+  //       text1: "Firebase Error",
+  //       text2: err.message,
+  //     });
+  //   }
+  // };
+
+  const OnForgotPassword = async () => {
+    // Step 1: Validate the form input
     if (!email || !newPassword) {
       setErrors({
         email: !email ? "Email is required" : undefined,
@@ -112,29 +162,78 @@ export default function SignIn() {
     }
 
     try {
+      // Step 2: Check if the email exists in Firestore
       const q = query(collection(db, "users"), where("email", "==", email));
       const querySnapshot = await getDocs(q);
+
       if (querySnapshot.empty) {
-        Toast.show({ type: "error", text1: "User not found" });
+        // If no user with this email exists
+        Toast.show({
+          type: "error",
+          text1: "Email not found",
+          text2: "No account exists with that email.",
+        });
         return;
       }
 
-      const userDoc = querySnapshot.docs[0];
-      await updateDoc(doc(db, "users", userDoc.id), {
-        password: hashPassword(newPassword),
-      });
+      // Get the document ID (UID) of the user
+      const userDoc = querySnapshot.docs[0]; // Assumes email is unique
+      const userDocRef = doc(db, "users", userDoc.id); // Use UID as the document reference
 
-      Toast.show({ type: "success", text1: "Password updated successfully" });
-      setResetMode(false);
-      setPassword("");
-      setNewPassword("");
-      setErrors({});
+      // Step 3: Ask for the old password (re-authentication)
+      const oldPassword = prompt("Enter your current password to continue:");
+      if (!oldPassword) {
+        Toast.show({
+          type: "error",
+          text1: "Password required",
+          text2: "Please provide your current password to proceed.",
+        });
+        return;
+      }
+
+      // Step 4: Re-authenticate using the old password
+      try {
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          oldPassword
+        );
+        const user = userCredential.user;
+
+        // Step 5: Update the password in Firebase Authentication
+        await updatePassword(user, newPassword);
+
+        // Step 6: Hash the new password before saving it to Firestore
+        const hashedPassword = hashPassword(newPassword); // Assuming you have a hashPassword function
+        await updateDoc(userDocRef, {
+          password: hashedPassword, // Update password in Firestore (hashed)
+        });
+
+        // Success message
+        Toast.show({
+          type: "success",
+          text1: "Password updated successfully.",
+          text2: "Your password has been changed.",
+        });
+
+        setEmail("");
+        setNewPassword("");
+        setErrors({});
+      } catch (err: any) {
+        // If reauthentication fails (incorrect old password or other errors)
+        console.error(err);
+        Toast.show({
+          type: "error",
+          text1: "Authentication failed",
+          text2: err.message || "Please check your old password and try again.",
+        });
+      }
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       Toast.show({
         type: "error",
-        text1: "Firebase Error",
-        text2: err.message,
+        text1: "Error updating password",
+        text2: err.message || "Please try again later.",
       });
     }
   };
@@ -151,7 +250,10 @@ export default function SignIn() {
         >
           <View style={styles.container}>
             {/* Back Button */}
-            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.8}
+            >
               <Ionicons
                 name="arrow-back"
                 size={28}
@@ -240,7 +342,7 @@ export default function SignIn() {
               {/* Action Button */}
               <TouchableOpacity
                 style={styles.signInButton}
-                onPress={resetMode ? OnResetPassword : OnSignIn}
+                onPress={resetMode ? OnForgotPassword : OnSignIn}
               >
                 <Text style={styles.signInButtonText}>
                   {resetMode ? "Reset Password" : "Sign In"}

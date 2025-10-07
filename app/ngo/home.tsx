@@ -1,3 +1,4 @@
+import LogoutButton from "@/components/LogoutButton";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function NgoHome() {
@@ -5,6 +6,7 @@ export default function NgoHome() {
     <View style={styles.container}>
       <Text style={styles.title}>NGO Home</Text>
       <Text>Track and manage donations for your NGO here.</Text>
+      <LogoutButton />
     </View>
   );
 }
