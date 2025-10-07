@@ -8,6 +8,9 @@
     "scheme": "wastefoodmanagement",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      "projectName": "Waste Food Management"
+    },
     "ios": {
       "supportsTablet": true
     },

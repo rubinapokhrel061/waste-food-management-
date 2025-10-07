@@ -33,7 +33,7 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<string>("donor");
-
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<any>({});
 
   useEffect(() => {
@@ -188,26 +188,39 @@ export default function SignUp() {
               <Text style={styles.label}>
                 Password <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.password && { borderColor: "red" },
-                ]}
-                secureTextEntry
-                placeholder="Enter password"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  if (errors.password) {
-                    if (text.length >= 6) {
-                      setErrors((prev: any) => ({
-                        ...prev,
-                        password: undefined,
-                      }));
+              <View style={styles.passwordInputWrapper}>
+                <TextInput
+                  style={[
+                    styles.passwordInput,
+                    errors.password && { borderColor: "red" },
+                  ]}
+                  placeholder="Enter password"
+                  value={password}
+                  secureTextEntry={!showPassword}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errors.password) {
+                      if (text.length >= 6) {
+                        setErrors((prev: any) => ({
+                          ...prev,
+                          password: undefined,
+                        }));
+                      }
                     }
-                  }
-                }}
-              />
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.passwordToggle}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye" : "eye-off"}
+                    size={22}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+
               {errors.password && (
                 <Text style={styles.errorText}>{errors.password}</Text>
               )}
@@ -390,5 +403,26 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+
+  passwordInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#f9f9f9",
+  },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontFamily: "outfit",
+    fontSize: 16,
+  },
+
+  passwordToggle: {
+    padding: 6,
   },
 });

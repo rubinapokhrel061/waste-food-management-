@@ -2,16 +2,11 @@ import AuthGuard from "@/components/AuthGuard";
 import { hashPassword } from "@/utils/hash";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNavigation, useRouter } from "expo-router";
-import { signInWithEmailAndPassword, updatePassword } from "firebase/auth";
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Dimensions,
@@ -34,10 +29,11 @@ const { width } = Dimensions.get("window");
 export default function SignIn() {
   const navigation = useNavigation();
   const router = useRouter();
-  const [newPassword, setNewPassword] = useState<string>("");
   const [resetMode, setResetMode] = useState<boolean>(false);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
+
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {}
   );
@@ -46,7 +42,6 @@ export default function SignIn() {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  // Handle Sign In
   const OnSignIn = async () => {
     const newErrors: { email?: string; password?: string } = {};
     if (!email) newErrors.email = "Email is required";
@@ -71,15 +66,9 @@ export default function SignIn() {
         Toast.show({ type: "error", text1: "User data not found" });
         return;
       }
-
       const userData = userDoc.data();
-
-      // Optional: Check hashed password if stored separately
       const enteredHash = hashPassword(password);
-      if (enteredHash !== userData?.password) {
-        Toast.show({ type: "error", text1: "Invalid password" });
-        return;
-      }
+      await updateDoc(doc(db, "users", uid), { password: enteredHash });
 
       // Navigate based on role
       if (userData.role === "admin") router.replace("/admin/dashboard");
@@ -108,136 +97,31 @@ export default function SignIn() {
     }
   };
 
-  // Handle Password Reset
-  // const OnResetPassword = async () => {
-  //   if (!email || !newPassword) {
-  //     setErrors({
-  //       email: !email ? "Email is required" : undefined,
-  //       password: !newPassword ? "New password is required" : undefined,
-  //     });
-  //     return;
-  //   }
-
-  //   try {
-  //     // const q = query(collection(db, "users"), where("email", "==", email));
-  //     // const querySnapshot = await getDocs(q);
-
-  //     // if (querySnapshot.empty) {
-  //     //   Toast.show({ type: "error", text1: "User not found" });
-  //     //   return;
-  //     // }
-  //     const re = await sendPasswordResetEmail(auth, email);
-  //     console.log(re);
-  //     // const userDoc = querySnapshot.docs[0];
-
-  //     // const hashedPassword = hashPassword(newPassword);
-
-  //     // await updateDoc(doc(db, "users", userDoc.id), {
-  //     //   password: hashedPassword,
-  //     // });
-
-  //     Toast.show({ type: "success", text1: "Password updated successfully" });
-  //     setResetMode(false);
-  //     setPassword("");
-  //     setNewPassword("");
-  //     setErrors({});
-  //   } catch (err: any) {
-  //     console.log(err);
-  //     Toast.show({
-  //       type: "error",
-  //       text1: "Firebase Error",
-  //       text2: err.message,
-  //     });
-  //   }
-  // };
-
   const OnForgotPassword = async () => {
-    // Step 1: Validate the form input
-    if (!email || !newPassword) {
-      setErrors({
-        email: !email ? "Email is required" : undefined,
-        password: !newPassword ? "New password is required" : undefined,
-      });
+    if (!email) {
+      setErrors({ email: "Email is required" });
       return;
     }
 
     try {
-      // Step 2: Check if the email exists in Firestore
-      const q = query(collection(db, "users"), where("email", "==", email));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        // If no user with this email exists
-        Toast.show({
-          type: "error",
-          text1: "Email not found",
-          text2: "No account exists with that email.",
-        });
-        return;
-      }
-
-      // Get the document ID (UID) of the user
-      const userDoc = querySnapshot.docs[0]; // Assumes email is unique
-      const userDocRef = doc(db, "users", userDoc.id); // Use UID as the document reference
-
-      // Step 3: Ask for the old password (re-authentication)
-      const oldPassword = prompt("Enter your current password to continue:");
-      if (!oldPassword) {
-        Toast.show({
-          type: "error",
-          text1: "Password required",
-          text2: "Please provide your current password to proceed.",
-        });
-        return;
-      }
-
-      // Step 4: Re-authenticate using the old password
-      try {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          oldPassword
-        );
-        const user = userCredential.user;
-
-        // Step 5: Update the password in Firebase Authentication
-        await updatePassword(user, newPassword);
-
-        // Step 6: Hash the new password before saving it to Firestore
-        const hashedPassword = hashPassword(newPassword); // Assuming you have a hashPassword function
-        await updateDoc(userDocRef, {
-          password: hashedPassword, // Update password in Firestore (hashed)
-        });
-
-        // Success message
-        Toast.show({
-          type: "success",
-          text1: "Password updated successfully.",
-          text2: "Your password has been changed.",
-        });
-
-        setEmail("");
-        setNewPassword("");
-        setErrors({});
-      } catch (err: any) {
-        // If reauthentication fails (incorrect old password or other errors)
-        console.error(err);
-        Toast.show({
-          type: "error",
-          text1: "Authentication failed",
-          text2: err.message || "Please check your old password and try again.",
-        });
-      }
+      await sendPasswordResetEmail(auth, email);
+      Toast.show({
+        type: "success",
+        text1: "Reset link sent!",
+        text2: "Check your email to reset your password.",
+      });
+      setEmail("");
+      setErrors({});
+      router.replace("/auth/sign-in");
     } catch (err: any) {
-      console.error(err);
+      console.log("Password reset error:", err);
       Toast.show({
         type: "error",
-        text1: "Error updating password",
-        text2: err.message || "Please try again later.",
+        text1: "Error sending reset link",
+        text2: err.message || "Please check your email and try again.",
       });
     }
   };
-
   return (
     <AuthGuard>
       <KeyboardAvoidingView
@@ -307,28 +191,40 @@ export default function SignIn() {
               </View>
 
               {/* Password / New Password */}
-              <View style={styles.inputWrapper}>
-                <Text style={styles.label}>
-                  {resetMode ? "New Password" : "Password"}{" "}
-                  <Text style={styles.required}>*</Text>
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={
-                    resetMode ? "Enter new password" : "Enter password"
-                  }
-                  secureTextEntry
-                  onChangeText={(text) => {
-                    resetMode ? setNewPassword(text) : setPassword(text);
-                    setErrors((prev) => ({ ...prev, password: undefined }));
-                  }}
-                  value={resetMode ? newPassword : password}
-                />
-                {errors.password && (
-                  <Text style={styles.errorText}>{errors.password}</Text>
-                )}
-              </View>
+              {!resetMode && (
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.label}>
+                    Password
+                    <Text style={styles.required}>*</Text>
+                  </Text>
+                  <View style={styles.passwordInputWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Enter your password"
+                      secureTextEntry={!showPassword}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        setErrors((prev) => ({ ...prev, password: undefined }));
+                      }}
+                      value={password}
+                    />
 
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.passwordToggle}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye" : "eye-off"}
+                        size={22}
+                        color={Colors.primary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password && (
+                    <Text style={styles.errorText}>{errors.password}</Text>
+                  )}
+                </View>
+              )}
               {/* Forgot Password */}
               <TouchableOpacity
                 onPress={() => setResetMode(!resetMode)}
@@ -454,6 +350,28 @@ const styles = StyleSheet.create({
     fontFamily: "outfit",
     marginLeft: 5,
   },
+
+  passwordInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#f9f9f9",
+  },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontFamily: "outfit",
+    fontSize: 16,
+  },
+
+  passwordToggle: {
+    padding: 6,
+  },
+
   imageContainer: {
     width: "100%",
     height: width > 400 ? 220 : 180,
