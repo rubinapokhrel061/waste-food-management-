@@ -55,7 +55,7 @@ export default function UpdateProfile() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<string>("donor");
+
   const [errors, setErrors] = useState<any>({});
   const [location, setLocation] = useState<any>(null);
   const [region, setRegion] = useState<any>(null);
@@ -77,13 +77,11 @@ export default function UpdateProfile() {
         router.replace("/auth/sign-in");
         return;
       }
-
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         setFullName(userData.fullName || "");
         setEmail(userData.email || "");
-        setRole(userData.role || "donor");
         if (userData.location) {
           setLocation({
             latitude: userData.location.latitude,
@@ -163,7 +161,6 @@ export default function UpdateProfile() {
 
       await updateDoc(doc(db, "users", user.uid), {
         fullName,
-        role,
         location: {
           latitude: location.latitude,
           longitude: location.longitude,
@@ -310,84 +307,6 @@ export default function UpdateProfile() {
               {errors.location && (
                 <Text style={styles.errorText}>{errors.location}</Text>
               )}
-            </View>
-
-            {/* Role Selection */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.label}>Select Role</Text>
-              <View style={styles.roleRow}>
-                {roles.map((r, index) => {
-                  const colors = [
-                    {
-                      bg: "#FEF3C7",
-                      border: "#F59E0B",
-                      text: "#92400E",
-                      active: "#F59E0B",
-                    },
-                    {
-                      bg: "#DBEAFE",
-                      border: "#3B82F6",
-                      text: "#1E40AF",
-                      active: "#3B82F6",
-                    },
-                    {
-                      bg: "#FCE7F3",
-                      border: "#EC4899",
-                      text: "#9F1239",
-                      active: "#EC4899",
-                    },
-                  ];
-                  return (
-                    <TouchableOpacity
-                      key={r}
-                      style={[
-                        styles.roleBtn,
-                        { borderColor: colors[index].border },
-                        role === r && {
-                          backgroundColor: colors[index].active,
-                          borderColor: colors[index].active,
-                        },
-                      ]}
-                      onPress={() => setRole(r)}
-                      activeOpacity={0.7}
-                    >
-                      <View
-                        style={[
-                          styles.roleIconCircle,
-                          {
-                            backgroundColor:
-                              role === r
-                                ? "rgba(255,255,255,0.3)"
-                                : colors[index].bg,
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={
-                            r === "admin"
-                              ? "shield-checkmark-outline"
-                              : r === "ngo"
-                              ? "people-outline"
-                              : "heart-outline"
-                          }
-                          size={20}
-                          color={role === r ? "#FFFFFF" : colors[index].active}
-                        />
-                      </View>
-                      <Text
-                        style={[
-                          styles.roleText,
-                          {
-                            color: role === r ? "#FFFFFF" : colors[index].text,
-                          },
-                        ]}
-                      >
-                        {r.charAt(0).toUpperCase() + r.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
             </View>
 
             {/* Update Button */}

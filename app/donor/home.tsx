@@ -45,8 +45,8 @@ const DonorNavigator: React.FC = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#4CAF50",
-        tabBarInactiveTintColor: "#888",
+        tabBarActiveTintColor: "#9333EA",
+        tabBarInactiveTintColor: "#111827",
         tabBarStyle: {
           backgroundColor: "#fff",
           borderTopWidth: 0,

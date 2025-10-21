@@ -38,8 +38,8 @@ export default function NgoHome() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#2E8B57",
-        tabBarInactiveTintColor: "#8E8E8E",
+        tabBarActiveTintColor: "#9333EA",
+        tabBarInactiveTintColor: "#111827",
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
           borderTopWidth: 0.5,

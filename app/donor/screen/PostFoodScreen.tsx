@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   postButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#9333EA",
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: "center",
