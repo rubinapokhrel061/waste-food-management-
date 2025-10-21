@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Alert, Text, TouchableOpacity } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { logout } from "../utils/logout";
 
 export default function LogoutButton() {
@@ -22,8 +22,23 @@ export default function LogoutButton() {
   };
 
   return (
-    <TouchableOpacity onPress={handleLogout} style={{ padding: 10 }}>
-      <Text style={{ color: "red", fontWeight: "bold" }}>Logout</Text>
+    <TouchableOpacity style={styles.button} onPress={handleLogout}>
+      <Text style={styles.text}>Logout</Text>
     </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: "#7c3aed",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  text: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+});

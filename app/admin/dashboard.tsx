@@ -44,8 +44,8 @@ const AdminNavigator: React.FC = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#4CAF50",
-        tabBarInactiveTintColor: "#888",
+        tabBarActiveTintColor: "#7C3AED",
+        tabBarInactiveTintColor: "#111827",
         tabBarStyle: {
           backgroundColor: "#fff",
           borderTopWidth: 0,
