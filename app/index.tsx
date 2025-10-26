@@ -1,4 +1,5 @@
 import { auth, db } from "@/configs/FirebaseConfig";
+import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -15,6 +16,16 @@ const Index = () => {
       if (status !== "granted") alert("Please enable notifications!");
     })();
   }, []);
+  const linking = {
+    prefixes: [Linking.createURL("/"), "wastefoodmanagement://"],
+    config: {
+      screens: {
+        food: {
+          path: "food/:id",
+        },
+      },
+    },
+  };
   useEffect(() => {
     const fetchUserRole = async () => {
       const user = auth.currentUser;

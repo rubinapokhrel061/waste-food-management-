@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Alert, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { logout } from "../utils/logout";
@@ -23,6 +24,7 @@ export default function LogoutButton() {
 
   return (
     <TouchableOpacity style={styles.button} onPress={handleLogout}>
+      <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
       <Text style={styles.text}>Logout</Text>
     </TouchableOpacity>
   );
@@ -30,11 +32,16 @@ export default function LogoutButton() {
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: "#7c3aed",
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 20,
+    marginVertical: 10,
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginTop: 10,
+    gap: 8,
   },
   text: {
     color: "#fff",

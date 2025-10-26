@@ -22,14 +22,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
-
-import ActivePostsScreen from "../donor/screen/ActivePostsScreen";
-import ChatScreen from "../donor/screen/ChatScreen";
 import DonorDashboardScreen from "../donor/screen/DonorDashboardScreen";
 import PostFoodScreen from "../donor/screen/PostFoodScreen";
 import ProfileScreen from "../donor/screen/ProfileScreen";
+import ChatScreen from "../screen/ChatScreen";
+import FoodsScreen from "../screen/FoodsScreen";
 
-// 👇 Type definition for navigation
 export type DonorTabParamList = {
   Dashboard: undefined;
   Post: undefined;
@@ -75,7 +73,7 @@ const DonorNavigator: React.FC = () => {
     >
       <Tab.Screen name="Dashboard" component={DonorDashboardScreen} />
       <Tab.Screen name="Post" component={PostFoodScreen} />
-      <Tab.Screen name="Active" component={ActivePostsScreen} />
+      <Tab.Screen name="Active" component={FoodsScreen} />
       <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

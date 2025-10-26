@@ -1,7 +1,13 @@
+import { db } from "@/configs/FirebaseConfig";
+import { Ionicons } from "@expo/vector-icons";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
-import React from "react";
+import { useRouter } from "expo-router";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,7 +19,119 @@ import { AdminTabParamList } from "../dashboard";
 
 type Props = BottomTabScreenProps<AdminTabParamList, "Dashboard">;
 
+interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  createdAt: any;
+}
+
+interface Post {
+  id: string;
+  foodName: string;
+  status: "pending" | "accepted" | "pickup" | "donated";
+  createdAt?: any;
+}
+
 const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const router = useRouter();
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    await Promise.all([fetchUsers(), fetchPosts()]);
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersData: User[] = [];
+      querySnapshot.forEach((doc) =>
+        usersData.push({ id: doc.id, ...doc.data() } as User)
+      );
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Failed to load users:", error);
+    }
+  };
+
+  const fetchPosts = async () => {
+    try {
+      const q = query(collection(db, "foods"), orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      const fetchedPosts: Post[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedPosts.push({
+          id: doc.id,
+          foodName: data.foodName,
+          status: data.status || "pending",
+          createdAt: data.createdAt,
+        });
+      });
+
+      setPosts(fetchedPosts);
+    } catch (error) {
+      console.error("Failed to load posts:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+  };
+
+  // Calculate real-time statistics
+  const donorCount = users.filter((u) => u.role === "donor").length;
+  const ngoCount = users.filter((u) => u.role === "ngo").length;
+  const totalPosts = posts.length;
+  const donatedPosts = posts.filter((p) => p.status === "donated").length;
+
+  // Get recent posts this month
+  const getThisMonthCount = () => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+
+    return posts.filter((post) => {
+      if (!post.createdAt?.toDate) return false;
+      const postDate = post.createdAt.toDate();
+      return (
+        postDate.getMonth() === thisMonth && postDate.getFullYear() === thisYear
+      );
+    }).length;
+  };
+
+  const thisMonthPosts = getThisMonthCount();
+  const thisMonthDonations = posts.filter((post) => {
+    if (!post.createdAt?.toDate || post.status !== "donated") return false;
+    const postDate = post.createdAt.toDate();
+    const now = new Date();
+    return (
+      postDate.getMonth() === now.getMonth() &&
+      postDate.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#9333EA" />
+        <Text style={styles.loaderText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.wrapper}>
       <StatusBar barStyle="light-content" backgroundColor="#9333EA" />
@@ -24,7 +142,10 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.greeting}>Hello, Admin 👋</Text>
           <Text style={styles.subtitle}>Overview of system stats</Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => router.push("/screen/NotificationScreen")}
+        >
           <Text style={styles.notificationIcon}>🔔</Text>
         </TouchableOpacity>
       </View>
@@ -33,19 +154,27 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.scrollView}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#9333EA"]}
+            tintColor="#9333EA"
+          />
+        }
       >
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>120</Text>
+            <Text style={styles.statNumber}>{donorCount}</Text>
             <Text style={styles.statLabel}>Donors</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>450</Text>
+            <Text style={styles.statNumber}>{ngoCount}</Text>
             <Text style={styles.statLabel}>NGOs</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>1023</Text>
+            <Text style={styles.statNumber}>{totalPosts}</Text>
             <Text style={styles.statLabel}>Posts</Text>
           </View>
         </View>
@@ -64,14 +193,16 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Manage Users</Text>
-              <Text style={styles.actionSubtitle}>Donors & NGOs</Text>
+              <Text style={styles.actionSubtitle}>
+                {donorCount} Donors & {ngoCount} NGOs
+              </Text>
             </View>
             <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}
-            // onPress={() => navigation.navigate("ManagePosts")}
+            onPress={() => navigation.navigate("Donations")}
             activeOpacity={0.9}
           >
             <View style={styles.actionIconContainer}>
@@ -79,7 +210,9 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Manage Posts</Text>
-              <Text style={styles.actionSubtitle}>All submissions</Text>
+              <Text style={styles.actionSubtitle}>
+                {totalPosts} total submissions
+              </Text>
             </View>
             <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>
@@ -96,7 +229,7 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.9}
             >
               <View style={styles.gridIconContainer}>
-                <Text style={styles.gridIcon}>📊</Text>
+                <Ionicons name="bar-chart-outline" size={32} color="#7C3AED" />
               </View>
               <Text style={styles.gridLabel}>Reports</Text>
             </TouchableOpacity>
@@ -107,20 +240,24 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.9}
             >
               <View style={styles.gridIconContainer}>
-                <Text style={styles.gridIcon}>⚙️</Text>
+                <Ionicons name="settings-outline" size={32} color="#7C3AED" />
               </View>
               <Text style={styles.gridLabel}>Settings</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.gridCard}
-              // onPress={() => navigation.navigate("Notifications")}
+              onPress={() => navigation.navigate("Chat")}
               activeOpacity={0.9}
             >
               <View style={styles.gridIconContainer}>
-                <Text style={styles.gridIcon}>🔔</Text>
+                <Ionicons
+                  name="chatbubbles-outline"
+                  size={32}
+                  color="#7C3AED"
+                />
               </View>
-              <Text style={styles.gridLabel}>Notifications</Text>
+              <Text style={styles.gridLabel}>Chat</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -131,7 +268,27 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.impactContent}>
             <Text style={styles.impactTitle}>System Impact</Text>
             <Text style={styles.impactText}>
-              1023 posts shared, 120 donors contributed this month!
+              {thisMonthPosts} posts shared, {thisMonthDonations} donations
+              completed this month!
+            </Text>
+          </View>
+        </View>
+
+        {/* Additional Stats */}
+        <View style={styles.additionalStats}>
+          <View style={styles.additionalStatCard}>
+            <Text style={styles.additionalStatNumber}>{donatedPosts}</Text>
+            <Text style={styles.additionalStatLabel}>Total Donations</Text>
+            <Text style={styles.additionalStatSubtext}>
+              {Math.round((donatedPosts / totalPosts) * 100 || 0)}% success rate
+            </Text>
+          </View>
+
+          <View style={styles.additionalStatCard}>
+            <Text style={styles.additionalStatNumber}>{users.length}</Text>
+            <Text style={styles.additionalStatLabel}>Total Users</Text>
+            <Text style={styles.additionalStatSubtext}>
+              Active community members
             </Text>
           </View>
         </View>
@@ -148,6 +305,18 @@ const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
     backgroundColor: "#F8F9FA",
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
+  },
+  loaderText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "600",
   },
   header: {
     backgroundColor: "#9333EA",
@@ -243,7 +412,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   primaryCard: {
-    backgroundColor: "#9333EA",
+    backgroundColor: "#c79bf1ff",
   },
   actionIconContainer: {
     width: 48,
@@ -263,17 +432,14 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#FFFFFF",
     marginBottom: 2,
   },
   actionSubtitle: {
     fontSize: 13,
-    color: "#FFFFFF",
     opacity: 0.8,
   },
   actionArrow: {
     fontSize: 20,
-    color: "#FFFFFF",
     opacity: 0.7,
   },
   gridRow: {
@@ -320,6 +486,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#A5B4FC",
+    marginBottom: 16,
   },
   impactEmoji: {
     fontSize: 40,
@@ -338,5 +505,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#4F46E5",
     lineHeight: 18,
+  },
+  additionalStats: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  additionalStatCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  additionalStatNumber: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#9333EA",
+    marginBottom: 6,
+  },
+  additionalStatLabel: {
+    fontSize: 13,
+    color: "#1E293B",
+    fontWeight: "700",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  additionalStatSubtext: {
+    fontSize: 11,
+    color: "#64748B",
+    textAlign: "center",
   },
 });

@@ -18,15 +18,16 @@
 //   },
 //   title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
 // });
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 
 import AdminDashboardScreen from "../admin/screens/AdminDashboardScreen";
-import ManageDonationsScreen from "../admin/screens/ManageDonationsScreen";
 import ManageUsersScreen from "../admin/screens/ManageUsersScreen";
 import ReportsScreen from "../admin/screens/ReportsScreen";
 import SettingsScreen from "../admin/screens/SettingsScreen";
+import ChatScreen from "../screen/ChatScreen";
+import FoodsScreen from "../screen/FoodsScreen";
 
 // Define the type for tab param list (optional but recommended)
 export type AdminTabParamList = {
@@ -34,6 +35,7 @@ export type AdminTabParamList = {
   Users: undefined;
   Donations: undefined;
   Reports: undefined;
+  Chat: undefined;
   Settings: undefined;
 };
 
@@ -81,7 +83,7 @@ const AdminNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Donations"
-        component={ManageDonationsScreen}
+        component={FoodsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="food" color={color} size={size} />
@@ -98,6 +100,15 @@ const AdminNavigator: React.FC = () => {
               color={color}
               size={size}
             />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble" color={color} size={size} />
           ),
         }}
       />
