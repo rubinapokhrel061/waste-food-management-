@@ -1,4 +1,5 @@
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
   Platform,
@@ -14,6 +15,8 @@ import { DonorTabParamList } from "../home";
 type Props = BottomTabScreenProps<DonorTabParamList, "Dashboard">;
 
 const DonorDashboardScreen: React.FC<Props> = ({ navigation }) => {
+  const router = useRouter();
+
   return (
     <View style={styles.wrapper}>
       <StatusBar barStyle="light-content" backgroundColor="#7C3AED" />
@@ -24,7 +27,10 @@ const DonorDashboardScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.greeting}>Hello, Donor 👋</Text>
           <Text style={styles.subtitle}>Make a difference today</Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => router.push("/screen/NotificationScreen")}
+        >
           <Text style={styles.notificationIcon}>🔔</Text>
         </TouchableOpacity>
       </View>
