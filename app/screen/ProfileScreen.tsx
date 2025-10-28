@@ -1,4 +1,5 @@
 import LogoutButton from "@/components/LogoutButton";
+import { auth } from "@/configs/FirebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useNavigation, useRouter } from "expo-router";
@@ -19,7 +20,6 @@ import {
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import Toast from "react-native-toast-message";
-import { auth } from "../../../configs/FirebaseConfig";
 
 const db = getFirestore();
 const { width } = Dimensions.get("window");

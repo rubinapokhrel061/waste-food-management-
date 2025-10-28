@@ -229,7 +229,6 @@ export default function PostFoodScreen() {
 
     try {
       setLoading(true);
-
       const imageUrl = await uploadImageToCloudinary(imageUri!);
       const user = auth.currentUser;
       console.log(user);
@@ -237,7 +236,7 @@ export default function PostFoodScreen() {
         foodName,
         description,
         useTime: Timestamp.fromDate(useTime!),
-        quantity: Number(quantity),
+        quantity: quantity,
         imageUrl,
         createdAt: Timestamp.now(),
         createdBy: {
@@ -378,7 +377,6 @@ export default function PostFoodScreen() {
                   setQuantity(text);
                   setErrors((prev) => ({ ...prev, quantity: "" }));
                 }}
-                keyboardType="numeric"
                 style={styles.input}
                 placeholderTextColor="#9CA3AF"
               />

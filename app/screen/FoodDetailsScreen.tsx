@@ -41,13 +41,7 @@ interface Post {
     phone?: string;
     uid?: string;
   };
-  pickupDetails?: {
-    date?: string;
-    time?: string;
-    address?: string;
-    ngoName?: string;
-    ngoPhone?: string;
-  };
+
   donatedDetails?: {
     date?: string;
     ngoName?: string;
@@ -283,82 +277,6 @@ export default function FoodDetailsScreen() {
               </View>
             </View>
           )}
-
-          {/* Pickup Details - Only for Pickup Status */}
-          {item.status === "pickup" && item.pickupDetails && (
-            <View style={styles.detailsCard}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                  <View
-                    style={[styles.cardIcon, { backgroundColor: "#DBEAFE" }]}
-                  >
-                    <Ionicons name="car" size={24} color="#3B82F6" />
-                  </View>
-                  <Text style={styles.cardTitle}>Pickup Details</Text>
-                </View>
-              </View>
-
-              <View style={styles.detailsList}>
-                {item.pickupDetails.date && (
-                  <View style={styles.detailItem}>
-                    <View style={styles.detailIconWrapper}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={18}
-                        color="#6B7280"
-                      />
-                    </View>
-                    <View style={styles.detailTextContainer}>
-                      <Text style={styles.detailLabel}>Pickup Date</Text>
-                      <Text style={styles.detailValue}>
-                        {item.pickupDetails.date}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {item.pickupDetails.time && (
-                  <View style={styles.detailItem}>
-                    <View style={styles.detailIconWrapper}>
-                      <Ionicons name="time-outline" size={18} color="#6B7280" />
-                    </View>
-                    <View style={styles.detailTextContainer}>
-                      <Text style={styles.detailLabel}>Pickup Time</Text>
-                      <Text style={styles.detailValue}>
-                        {item.pickupDetails.time}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {item.pickupDetails.address && (
-                  <View style={styles.detailItem}>
-                    <View style={styles.detailIconWrapper}>
-                      <Ionicons
-                        name="location-outline"
-                        size={18}
-                        color="#6B7280"
-                      />
-                    </View>
-                    <View style={styles.detailTextContainer}>
-                      <Text style={styles.detailLabel}>Pickup Address</Text>
-                      <Text style={styles.detailValue}>
-                        {item.pickupDetails.address}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.alertBox}>
-                <Ionicons name="information-circle" size={20} color="#3B82F6" />
-                <Text style={styles.alertText}>
-                  Please arrive on time for your scheduled pickup
-                </Text>
-              </View>
-            </View>
-          )}
-
           {/* Donated Details - Only for Donated Status */}
           {item.status === "donated" && item.donatedDetails && (
             <View style={styles.detailsCard}>

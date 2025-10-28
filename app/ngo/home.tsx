@@ -1,37 +1,22 @@
-// import LogoutButton from "@/components/LogoutButton";
-// import { StyleSheet, Text, View } from "react-native";
-
-// export default function NgoHome() {
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.title}>NGO Home</Text>
-//       <Text>Track and manage donations for your NGO here.</Text>
-//       <LogoutButton />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     alignItems: "center",
-//     justifyContent: "center",
-//     backgroundColor: "#F9FAFB",
-//   },
-//   title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
-// });
-
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 
-import AssignPickupScreen from "../ngo/screen/AssignPickupScreen";
 import NGODashboardScreen from "../ngo/screen/NGODashboardScreen";
 import NearbyFoodScreen from "../ngo/screen/NearbyFoodScreen";
-import PickupTrackingScreen from "../ngo/screen/PickupTrackingScreen";
-import ProfileScreen from "../ngo/screen/ProfileScreen";
+import AssignPickupScreen from "./screen/DonationStatus";
 
-const Tab = createBottomTabNavigator();
+import ChatScreen from "../screen/ChatScreen";
+import ProfileScreen from "../screen/ProfileScreen";
+export type NGOTabParamList = {
+  Dashboard: undefined;
+  Nearby: undefined;
+  Report: undefined;
+  Chat: undefined;
+  Profile: undefined;
+};
+
+const Tab = createBottomTabNavigator<NGOTabParamList>();
 
 export default function NgoHome() {
   return (
@@ -72,7 +57,7 @@ export default function NgoHome() {
         }}
       />
       <Tab.Screen
-        name="Pickup"
+        name="Report"
         component={AssignPickupScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
@@ -80,12 +65,13 @@ export default function NgoHome() {
           ),
         }}
       />
+
       <Tab.Screen
-        name="Track"
-        component={PickupTrackingScreen}
+        name="Chat"
+        component={ChatScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="navigation" color={color} size={size} />
+            <Ionicons name="chatbubble" color={color} size={size} />
           ),
         }}
       />
