@@ -107,6 +107,7 @@ export default function SignUp() {
         fullName,
         email,
         role,
+        uid: user.uid,
         password: hashPassword(password),
         location: {
           latitude: location.latitude,

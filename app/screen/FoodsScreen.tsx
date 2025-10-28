@@ -82,9 +82,7 @@ interface UserData {
     address?: string;
   };
 }
-
 const statuses = ["pending", "accepted", "pickup", "inTransit", "donated"];
-
 export default function FoodsScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -438,8 +436,8 @@ export default function FoodsScreen() {
 
   const renderButton = ({ item }: { item: Post }) => {
     const { status, ngoDetails, createdBy } = item;
-
-    // NGO can accept pending requests (visible to all NGOs)
+    console.log("createdBy", createdBy?.uid);
+    console.log("user?.uid", user?.uid);
     if (status === "pending" && user?.role === "ngo") {
       return (
         <TouchableOpacity
@@ -452,7 +450,6 @@ export default function FoodsScreen() {
       );
     }
 
-    // Donor can mark as Pickup only if this donor created the post
     if (
       status === "accepted" &&
       user?.role === "donor" &&
