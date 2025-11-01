@@ -1,5 +1,6 @@
 import LogoutButton from "@/components/LogoutButton";
 import { auth } from "@/configs/FirebaseConfig";
+import { hashPassword } from "@/utils/hash";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useNavigation, useRouter } from "expo-router";
@@ -24,19 +25,25 @@ import Toast from "react-native-toast-message";
 const db = getFirestore();
 const { width } = Dimensions.get("window");
 
-const roles: string[] = ["admin", "ngo", "donor"];
-
-export default function UpdateProfile() {
+export default function ProfileScreen() {
   const navigation = useNavigation();
   const router = useRouter();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [errors, setErrors] = useState<any>({});
   const [location, setLocation] = useState<any>(null);
   const [region, setRegion] = useState<any>(null);
   const [mapVisible, setMapVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -110,6 +117,23 @@ export default function UpdateProfile() {
     if (!fullName.trim()) newErrors.fullName = "Full Name is required";
     if (!location) newErrors.location = "Please select a location";
 
+    // Password validation (only if user is trying to change password)
+    if (currentPassword || newPassword || confirmPassword) {
+      if (!currentPassword) {
+        newErrors.currentPassword = "Current password is required";
+      }
+      if (!newPassword) {
+        newErrors.newPassword = "New password is required";
+      } else if (newPassword.length < 6) {
+        newErrors.newPassword = "Password must be at least 6 characters";
+      }
+      if (!confirmPassword) {
+        newErrors.confirmPassword = "Please confirm your password";
+      } else if (newPassword !== confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -125,10 +149,15 @@ export default function UpdateProfile() {
     }
   };
 
-  const handleUpdateProfile = async () => {
+  const handleSaveClick = () => {
     if (!validateForm()) return;
+    setConfirmModalVisible(true);
+  };
 
+  const handleUpdateProfile = async () => {
+    setConfirmModalVisible(false);
     setUpdating(true);
+
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -136,7 +165,14 @@ export default function UpdateProfile() {
         return;
       }
 
-      await updateDoc(doc(db, "users", user.uid), {
+      // Get current user data to verify password
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (!userDoc.exists()) {
+        throw new Error("User data not found");
+      }
+
+      const userData = userDoc.data();
+      const updateData: any = {
         fullName,
         location: {
           latitude: location.latitude,
@@ -144,13 +180,39 @@ export default function UpdateProfile() {
           address: address || "Unknown",
         },
         updatedAt: new Date(),
-      });
+      };
+
+      // Handle password change
+      if (currentPassword && newPassword) {
+        const enteredHash = hashPassword(currentPassword);
+
+        if (enteredHash !== userData.password) {
+          Toast.show({
+            type: "error",
+            text1: "Incorrect Password",
+            text2: "Current password is incorrect",
+          });
+          setUpdating(false);
+          return;
+        }
+
+        updateData.password = hashPassword(newPassword);
+      }
+
+      await updateDoc(doc(db, "users", user.uid), updateData);
 
       Toast.show({
         type: "success",
         text1: "Profile updated successfully",
-        text2: "Your changes have been saved",
+        text2: newPassword
+          ? "Password changed successfully"
+          : "Your changes have been saved",
       });
+
+      // Clear password fields
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
 
       router.back();
     } catch (error: any) {
@@ -286,10 +348,156 @@ export default function UpdateProfile() {
               )}
             </View>
 
+            {/* Password Section Header */}
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLine} />
+              <Text style={styles.sectionHeaderText}>
+                Change Password (Optional)
+              </Text>
+              <View style={styles.sectionHeaderLine} />
+            </View>
+
+            {/* Current Password */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>Current Password</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  errors.currentPassword && styles.inputError,
+                ]}
+              >
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color="#7C3AED"
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter current password"
+                  placeholderTextColor="#A78BFA"
+                  secureTextEntry={!showCurrentPassword}
+                  value={currentPassword}
+                  onChangeText={(text) => {
+                    setCurrentPassword(text);
+                    if (errors.currentPassword && text) {
+                      setErrors((prev: any) => ({
+                        ...prev,
+                        currentPassword: undefined,
+                      }));
+                    }
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  <Ionicons
+                    name={showCurrentPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#A78BFA"
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.currentPassword && (
+                <Text style={styles.errorText}>{errors.currentPassword}</Text>
+              )}
+            </View>
+
+            {/* New Password */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>New Password</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  errors.newPassword && styles.inputError,
+                ]}
+              >
+                <View style={styles.iconContainer}>
+                  <Ionicons name="key-outline" size={20} color="#7C3AED" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter new password"
+                  placeholderTextColor="#A78BFA"
+                  secureTextEntry={!showNewPassword}
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    if (errors.newPassword && text.length >= 6) {
+                      setErrors((prev: any) => ({
+                        ...prev,
+                        newPassword: undefined,
+                      }));
+                    }
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <Ionicons
+                    name={showNewPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#A78BFA"
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.newPassword && (
+                <Text style={styles.errorText}>{errors.newPassword}</Text>
+              )}
+            </View>
+
+            {/* Confirm Password */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>Confirm New Password</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  errors.confirmPassword && styles.inputError,
+                ]}
+              >
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={20}
+                    color="#7C3AED"
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm new password"
+                  placeholderTextColor="#A78BFA"
+                  secureTextEntry={!showConfirmPassword}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (errors.confirmPassword && text === newPassword) {
+                      setErrors((prev: any) => ({
+                        ...prev,
+                        confirmPassword: undefined,
+                      }));
+                    }
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#A78BFA"
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.confirmPassword && (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              )}
+            </View>
+
             {/* Update Button */}
             <TouchableOpacity
               style={[styles.updateButton, updating && styles.disabledButton]}
-              onPress={handleUpdateProfile}
+              onPress={handleSaveClick}
               activeOpacity={0.85}
               disabled={updating}
             >
@@ -340,6 +548,42 @@ export default function UpdateProfile() {
             >
               <Text style={styles.doneText}>Confirm Location</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal
+        visible={confirmModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <View style={styles.confirmIconWrapper}>
+              <Ionicons name="warning-outline" size={48} color="#F59E0B" />
+            </View>
+            <Text style={styles.confirmTitle}>Confirm Changes</Text>
+            <Text style={styles.confirmMessage}>
+              {currentPassword && newPassword
+                ? "Are you sure you want to update your profile and change your password?"
+                : "Are you sure you want to update your profile?"}
+            </Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={styles.confirmCancelBtn}
+                onPress={() => setConfirmModalVisible(false)}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmSaveBtn}
+                onPress={handleUpdateProfile}
+              >
+                <Text style={styles.confirmSaveText}>Yes, Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -537,35 +781,21 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontFamily: "outfit",
   },
-  roleRow: {
+  sectionHeader: {
     flexDirection: "row",
-    gap: 10,
+    alignItems: "center",
+    marginVertical: 16,
+    gap: 12,
   },
-  roleBtn: {
+  sectionHeaderLine: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    height: 1,
+    backgroundColor: "#E5E7EB",
   },
-  roleIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  roleText: {
+  sectionHeaderText: {
+    fontSize: 13,
     fontFamily: "outfit",
-    fontSize: 12,
+    color: "#6B7280",
     fontWeight: "600",
   },
   updateButton: {
@@ -636,5 +866,85 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     letterSpacing: 0.3,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  confirmModal: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  confirmIconWrapper: {
+    alignSelf: "center",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  confirmTitle: {
+    fontSize: 22,
+    fontFamily: "outfit-bold",
+    color: "#1F2937",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  confirmMessage: {
+    fontSize: 15,
+    fontFamily: "outfit",
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  confirmButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    alignItems: "center",
+  },
+  confirmCancelText: {
+    fontSize: 15,
+    fontFamily: "outfit",
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  confirmSaveBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#7C3AED",
+    alignItems: "center",
+    shadowColor: "#7C3AED",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  confirmSaveText: {
+    fontSize: 15,
+    fontFamily: "outfit-bold",
+    color: "#FFFFFF",
   },
 });

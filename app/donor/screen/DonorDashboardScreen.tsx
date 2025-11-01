@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 
+import { useUser } from "@/contexts/UserContext";
 import { Ionicons } from "@expo/vector-icons";
 import { DonorTabParamList } from "../home";
 
@@ -37,7 +38,7 @@ const DonorDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const { user } = useUser();
   const fetchPosts = async () => {
     try {
       const q = query(collection(db, "foods"), orderBy("createdAt", "desc"));
@@ -87,8 +88,7 @@ const DonorDashboardScreen: React.FC<Props> = ({ navigation }) => {
       </View>
     );
   }
-
-  // ✅ Calculate dynamic stats
+  console.log(user);
   const totalPosts = posts.length;
   const donatedCount = posts.filter((p) => p.status === "donated").length;
   const impactPercent =
@@ -98,10 +98,9 @@ const DonorDashboardScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.wrapper}>
       <StatusBar barStyle="light-content" backgroundColor="#7C3AED" />
 
-      {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, Donor 👋</Text>
+          <Text style={styles.greeting}>Hello, {user?.fullName} 👋</Text>
           <Text style={styles.subtitle}>Make a difference today</Text>
         </View>
         <TouchableOpacity
@@ -154,14 +153,14 @@ const DonorDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate("Active")}
+            onPress={() => navigation.navigate("Foods")}
             activeOpacity={0.9}
           >
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon}>📋</Text>
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Active Posts</Text>
+              <Text style={styles.actionTitle}>See All Foods</Text>
               <Text style={styles.actionSubtitle}>Manage your listings</Text>
             </View>
             <Text style={styles.actionArrow}>→</Text>
@@ -229,7 +228,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#7C3AED",
-    paddingTop: Platform.OS === "ios" ? 50 : 35,
+    paddingTop: Platform.OS === "ios" ? 50 : 30,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: "row",
@@ -238,7 +237,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   greeting: {
-    fontSize: 26,
+    fontSize: 18,
     fontWeight: "800",
     color: "#FFFFFF",
     marginBottom: 2,
@@ -268,13 +267,13 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     alignItems: "center",
     elevation: 2,
   },
@@ -290,13 +289,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 12,
+    marginBottom: 8,
     paddingLeft: 4,
   },
   actionCard: {
@@ -350,7 +349,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     alignItems: "center",
     elevation: 2,
   },

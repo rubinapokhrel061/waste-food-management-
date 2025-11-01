@@ -1,4 +1,5 @@
 import { db } from "@/configs/FirebaseConfig";
+import { useUser } from "@/contexts/UserContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { useRouter } from "expo-router";
@@ -44,7 +45,7 @@ const NGODashboardScreen: React.FC<Props> = ({ navigation }) => {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const { user } = useUser();
   const fetchPosts = async () => {
     try {
       const q = query(collection(db, "foods"), orderBy("createdAt", "desc"));
@@ -77,7 +78,7 @@ const NGODashboardScreen: React.FC<Props> = ({ navigation }) => {
       setLoading(false);
     }
   };
-
+  console.log("user", user);
   useEffect(() => {
     fetchPosts();
   }, []);
@@ -108,7 +109,7 @@ const NGODashboardScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Welcome, NGO 🤝</Text>
+          <Text style={styles.greeting}>Welcome, {user?.fullName} 🤝</Text>
           <Text style={styles.subtitle}>Help reduce food waste</Text>
         </View>
         <TouchableOpacity
@@ -187,33 +188,14 @@ const NGODashboardScreen: React.FC<Props> = ({ navigation }) => {
               <MaterialIcons name="delivery-dining" size={28} color="#9333EA" />
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Assign Pickup</Text>
+              <Text style={styles.actionTitle}>Manage Donation Status</Text>
               <Text style={styles.actionSubtitle}>
-                Manage pickup volunteers
-              </Text>
-            </View>
-            <Text style={styles.actionArrow}>→</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => navigation.navigate("Track")}
-            activeOpacity={0.9}
-          >
-            <View style={styles.actionIconContainer}>
-              <MaterialIcons name="navigation" size={28} color="#9333EA" />
-            </View>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Track Pickups</Text>
-              <Text style={styles.actionSubtitle}>
-                Monitor active collections
+                Track and manage food donation progress
               </Text>
             </View>
             <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Quick Links */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Links</Text>
 
@@ -309,7 +291,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   greeting: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
     color: "#FFFFFF",
     marginBottom: 2,

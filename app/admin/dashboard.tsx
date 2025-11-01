@@ -1,42 +1,25 @@
-// import { StyleSheet, Text, View } from "react-native";
-
-// export default function AdminDashboard() {
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.title}>Admin Dashboard</Text>
-//       <Text>Manage all users, donations, and reports here.</Text>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     alignItems: "center",
-//     justifyContent: "center",
-//     backgroundColor: "#F9FAFB",
-//   },
-//   title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
-// });
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 
 import AdminDashboardScreen from "../admin/screens/AdminDashboardScreen";
 import ManageUsersScreen from "../admin/screens/ManageUsersScreen";
 import ReportsScreen from "../admin/screens/ReportsScreen";
-import SettingsScreen from "../admin/screens/SettingsScreen";
 import ChatScreen from "../screen/ChatScreen";
 import FoodsScreen from "../screen/FoodsScreen";
+import ProfileScreen from "../screen/ProfileScreen";
 
-// Define the type for tab param list (optional but recommended)
 export type AdminTabParamList = {
   Dashboard: undefined;
   Users: undefined;
   Donations: undefined;
   Reports: undefined;
   Chat: undefined;
-  Settings: undefined;
+  Profile: undefined;
 };
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
@@ -113,12 +96,13 @@ const AdminNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
+        name="Profile"
+        component={ProfileScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={size} />
+            <MaterialIcons name="person" color={color} size={size} />
           ),
+          tabBarLabel: "Profile",
         }}
       />
     </Tab.Navigator>

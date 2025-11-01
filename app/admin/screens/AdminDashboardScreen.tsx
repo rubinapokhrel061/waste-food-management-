@@ -1,4 +1,5 @@
 import { db } from "@/configs/FirebaseConfig";
+import { useUser } from "@/contexts/UserContext";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { useRouter } from "expo-router";
@@ -40,6 +41,7 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const router = useRouter();
+  const { user } = useUser();
   useEffect(() => {
     fetchData();
   }, []);
@@ -91,13 +93,11 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
     await fetchData();
   };
 
-  // Calculate real-time statistics
   const donorCount = users.filter((u) => u.role === "donor").length;
   const ngoCount = users.filter((u) => u.role === "ngo").length;
   const totalPosts = posts.length;
   const donatedPosts = posts.filter((p) => p.status === "donated").length;
 
-  // Get recent posts this month
   const getThisMonthCount = () => {
     const now = new Date();
     const thisMonth = now.getMonth();
@@ -131,7 +131,7 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
       </View>
     );
   }
-
+  console.log("user", user);
   return (
     <View style={styles.wrapper}>
       <StatusBar barStyle="light-content" backgroundColor="#9333EA" />
@@ -139,7 +139,7 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, Admin 👋</Text>
+          <Text style={styles.greeting}>Hello, {user?.fullName} 👋</Text>
           <Text style={styles.subtitle}>Overview of system stats</Text>
         </View>
         <TouchableOpacity
@@ -236,7 +236,7 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
             <TouchableOpacity
               style={styles.gridCard}
-              onPress={() => navigation.navigate("Settings")}
+              onPress={() => navigation.navigate("Profile")}
               activeOpacity={0.9}
             >
               <View style={styles.gridIconContainer}>
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   greeting: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
     color: "#FFFFFF",
     marginBottom: 2,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
@@ -389,13 +389,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 12,
+    marginBottom: 8,
     paddingLeft: 4,
   },
   actionCard: {

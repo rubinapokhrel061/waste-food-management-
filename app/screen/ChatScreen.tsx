@@ -36,6 +36,7 @@ interface User {
   lastMessageSenderId?: string;
   lastMessageRead?: boolean;
   lastMessageReadAt?: any;
+  hasMessages?: boolean;
 }
 
 interface Message {
@@ -56,12 +57,14 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"conversations" | "allUsers">(
+    "conversations"
+  );
   const router = useRouter();
 
   const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
   const currentUser = auth.currentUser;
 
-  // 🔹 Fetch messages
   useEffect(() => {
     if (!currentUser) return;
 
@@ -81,7 +84,6 @@ export default function ChatScreen() {
     return () => unsubscribeMessages();
   }, [currentUser]);
 
-  // 🔹 Fetch users function
   const fetchUsers = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
@@ -100,6 +102,7 @@ export default function ChatScreen() {
           online: false,
           lastMessage: "",
           unreadCount: 0,
+          hasMessages: false,
         });
       });
 
@@ -112,19 +115,16 @@ export default function ChatScreen() {
     }
   };
 
-  // 🔹 Initial fetch
   useEffect(() => {
     fetchUsers();
   }, [currentUser]);
 
-  // 🔹 Handle pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUsers();
   };
 
-  // 🔹 Enrich users with last message + unread count
-  const enrichedUsers = users.map((user) => {
+  const enrichedUsers: User[] = users.map((user) => {
     const userMessages = messages.filter(
       (msg) =>
         (msg.senderId === user.id && msg.receiverId === currentUser?.uid) ||
@@ -138,8 +138,7 @@ export default function ChatScreen() {
     });
 
     const lastMsg = userMessages[0];
-
-    // Only count unread messages that are sent by the OTHER user (not current user)
+    const hasMessages = userMessages.length > 0;
     const unreadCount = userMessages.filter(
       (msg) =>
         msg.senderId === user.id &&
@@ -149,25 +148,33 @@ export default function ChatScreen() {
 
     return {
       ...user,
-      lastMessage:
-        typeof lastMsg?.text === "string" ? lastMsg.text : user.email || "",
-      lastMessageTime: lastMsg?.createdAt,
-      lastMessageSenderId: lastMsg?.senderId,
-      lastMessageRead: lastMsg?.read,
-      lastMessageReadAt: lastMsg?.readAt,
+      hasMessages,
+      lastMessage: lastMsg?.text ? String(lastMsg.text) : "",
+      lastMessageTime: lastMsg?.createdAt || null,
+      lastMessageSenderId: lastMsg?.senderId || null,
+      lastMessageRead: lastMsg?.read || false,
+      lastMessageReadAt: lastMsg?.readAt || null,
       unreadCount,
-    };
+    } as User;
   });
 
-  // 🔹 Sort by last message time
-  const sortedUsers = [...enrichedUsers].sort((a, b) => {
+  const usersWithMessages = enrichedUsers.filter((u) => u.hasMessages);
+  const usersWithoutMessages = enrichedUsers.filter((u) => !u.hasMessages);
+  const sortedUsersWithMessages = [...usersWithMessages].sort((a, b) => {
     const timeA = a.lastMessageTime?.toMillis?.() || 0;
     const timeB = b.lastMessageTime?.toMillis?.() || 0;
     return timeB - timeA;
   });
+  const sortedUsersWithoutMessages = [...usersWithoutMessages].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
-  // 🔹 Search filter
-  const searchFilteredUsers = sortedUsers.filter((u) => {
+  const displayUsers =
+    viewMode === "conversations"
+      ? sortedUsersWithMessages
+      : [...sortedUsersWithMessages, ...sortedUsersWithoutMessages];
+
+  const searchFilteredUsers = displayUsers.filter((u) => {
     const searchLower = search.toLowerCase();
     return (
       u.name?.toLowerCase().includes(searchLower) ||
@@ -176,13 +183,11 @@ export default function ChatScreen() {
     );
   });
 
-  // 🔹 Role filter
   const filteredUsers = searchFilteredUsers.filter((u) => {
     if (selectedFilter === "all") return true;
     return u.role?.toLowerCase() === selectedFilter.toLowerCase();
   });
 
-  // 🔹 Format timestamp
   const formatTime = (timestamp: any) => {
     if (!timestamp?.toDate) return "";
     const date = timestamp.toDate();
@@ -219,14 +224,20 @@ export default function ChatScreen() {
     return icons[role] || "person";
   };
 
-  // 🔹 Render user card
   const renderUserItem = ({ item: user }: { item: User }) => {
+    if (!user || typeof user !== "object") return null;
+
+    const userName = user?.name ? String(user.name) : "Unknown User";
+    const userRole = user?.role ? String(user.role) : "";
+    const lastMessage = user?.lastMessage ? String(user.lastMessage) : "";
+    const hasMessages = Boolean(user?.hasMessages);
+    const unreadCount = Number(user?.unreadCount) || 0;
+
     const isLastMessageFromCurrentUser =
       user.lastMessageSenderId === currentUser?.uid;
     const showSeenStatus = isLastMessageFromCurrentUser && user.lastMessageRead;
-    const showUnreadBadge =
-      !isLastMessageFromCurrentUser && user.unreadCount && user.unreadCount > 0;
-    const roleColor = getRoleColor(user.role || "");
+    const showUnreadBadge = !isLastMessageFromCurrentUser && unreadCount > 0;
+    const roleColor = getRoleColor(userRole);
 
     return (
       <TouchableOpacity
@@ -250,7 +261,7 @@ export default function ChatScreen() {
               <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
             ) : (
               <Ionicons
-                name={getRoleIcon(user.role || "") as any}
+                name={getRoleIcon(userRole) as any}
                 size={28}
                 color={roleColor.border}
               />
@@ -264,9 +275,9 @@ export default function ChatScreen() {
           <View style={styles.userHeader}>
             <View style={styles.nameRoleContainer}>
               <Text style={styles.userName} numberOfLines={1}>
-                {user?.name}
+                {userName}
               </Text>
-              {user?.role && (
+              {userRole && (
                 <View
                   style={[
                     styles.roleBadge,
@@ -277,54 +288,64 @@ export default function ChatScreen() {
                   ]}
                 >
                   <Ionicons
-                    name={getRoleIcon(user.role) as any}
+                    name={getRoleIcon(userRole) as any}
                     size={10}
                     color={roleColor.text}
                   />
                   <Text style={[styles.roleText, { color: roleColor.text }]}>
-                    {user.role.toUpperCase()}
+                    {userRole.toUpperCase()}
                   </Text>
                 </View>
               )}
             </View>
-            <Text style={styles.timeText}>
-              {formatTime(user?.lastMessageTime)}
-            </Text>
+            {hasMessages && user.lastMessageTime && (
+              <Text style={styles.timeText}>
+                {formatTime(user.lastMessageTime)}
+              </Text>
+            )}
           </View>
 
           <View style={styles.messageRow}>
             <View style={styles.lastMessageContainer}>
-              {isLastMessageFromCurrentUser && (
-                <Ionicons
-                  name={showSeenStatus ? "checkmark-done" : "checkmark"}
-                  size={14}
-                  color={showSeenStatus ? "#7C3AED" : "#9CA3AF"}
-                  style={styles.checkIcon}
-                />
+              {hasMessages ? (
+                <>
+                  {isLastMessageFromCurrentUser && (
+                    <Ionicons
+                      name={showSeenStatus ? "checkmark-done" : "checkmark"}
+                      size={14}
+                      color={showSeenStatus ? "#7C3AED" : "#9CA3AF"}
+                      style={styles.checkIcon}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.lastMessage,
+                      showUnreadBadge ? styles.unreadMessage : undefined,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {lastMessage || "No message"}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.noMessageText}>
+                  {`Start a conversation with ${userName}`}
+                </Text>
               )}
-              <Text
-                style={[
-                  styles.lastMessage,
-                  showUnreadBadge ? styles.unreadMessage : undefined,
-                ]}
-                numberOfLines={1}
-              >
-                {typeof user?.lastMessage === "string" ? user?.lastMessage : ""}
-              </Text>
             </View>
 
-            {showUnreadBadge && user?.unreadCount ? (
+            {showUnreadBadge && unreadCount > 0 && (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadText}>
-                  {user.unreadCount > 99 ? "99+" : user.unreadCount}
+                  {unreadCount > 99 ? "99+" : String(unreadCount)}
                 </Text>
               </View>
-            ) : null}
+            )}
           </View>
 
-          {showSeenStatus && (
+          {showSeenStatus && user.lastMessageReadAt && (
             <Text style={styles.seenText}>
-              Seen {formatTime(user.lastMessageReadAt)}
+              {`Seen ${formatTime(user.lastMessageReadAt)}`}
             </Text>
           )}
         </View>
@@ -363,13 +384,60 @@ export default function ChatScreen() {
           <View>
             <Text style={styles.headerTitle}>Messages</Text>
             <Text style={styles.headerSubtitle}>
-              {filteredUsers.length} conversation
-              {filteredUsers.length !== 1 ? "s" : ""}
+              {`${filteredUsers.length} ${
+                viewMode === "conversations" ? "conversation" : "user"
+              }${filteredUsers.length !== 1 ? "s" : ""}`}
             </Text>
           </View>
         </View>
         <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
           <Ionicons name="refresh" size={20} color="#7C3AED" />
+        </TouchableOpacity>
+      </View>
+
+      {/* View Mode Toggle */}
+      <View style={styles.viewModeContainer}>
+        <TouchableOpacity
+          style={[
+            styles.viewModeButton,
+            viewMode === "conversations" && styles.viewModeButtonActive,
+          ]}
+          onPress={() => setViewMode("conversations")}
+        >
+          <Ionicons
+            name="chatbubbles"
+            size={16}
+            color={viewMode === "conversations" ? "#FFF" : "#6B7280"}
+          />
+          <Text
+            style={[
+              styles.viewModeText,
+              viewMode === "conversations" && styles.viewModeTextActive,
+            ]}
+          >
+            {`Conversations (${sortedUsersWithMessages.length})`}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.viewModeButton,
+            viewMode === "allUsers" && styles.viewModeButtonActive,
+          ]}
+          onPress={() => setViewMode("allUsers")}
+        >
+          <Ionicons
+            name="people"
+            size={16}
+            color={viewMode === "allUsers" ? "#FFF" : "#6B7280"}
+          />
+          <Text
+            style={[
+              styles.viewModeText,
+              viewMode === "allUsers" && styles.viewModeTextActive,
+            ]}
+          >
+            {`All Users (${users.length})`}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -395,8 +463,9 @@ export default function ChatScreen() {
         {["all", "donor", "admin", "ngo"].map((role) => {
           const count =
             role === "all"
-              ? filteredUsers.length
-              : filteredUsers.filter((user) => user.role === role).length;
+              ? users.length
+              : users.filter((user) => user.role?.toLowerCase() === role)
+                  .length;
 
           return (
             <TouchableOpacity
@@ -413,7 +482,7 @@ export default function ChatScreen() {
                   selectedFilter === role && styles.filterChipTextActive,
                 ]}
               >
-                {role.charAt(0).toUpperCase() + role.slice(1)} ({count})
+                {`${role.charAt(0).toUpperCase() + role.slice(1)} (${count})`}
               </Text>
             </TouchableOpacity>
           );
@@ -424,26 +493,47 @@ export default function ChatScreen() {
       {filteredUsers.length === 0 ? (
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconWrapper}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#D1D5DB" />
+            <Ionicons
+              name={
+                viewMode === "conversations"
+                  ? "chatbubbles-outline"
+                  : "people-outline"
+              }
+              size={64}
+              color="#D1D5DB"
+            />
           </View>
           <Text style={styles.emptyTitle}>
-            {search ? "No results found" : "No conversations yet"}
+            {search
+              ? "No results found"
+              : viewMode === "conversations"
+              ? "No conversations yet"
+              : "No users found"}
           </Text>
           <Text style={styles.emptySubtitle}>
             {search
               ? "Try searching with a different keyword"
-              : "Start a new conversation to get started"}
+              : viewMode === "conversations"
+              ? "Switch to 'All Users' to start a new conversation"
+              : "Start chatting with users from the list"}
           </Text>
+          {viewMode === "conversations" && !search && (
+            <TouchableOpacity
+              style={styles.switchViewButton}
+              onPress={() => setViewMode("allUsers")}
+            >
+              <Ionicons name="people" size={20} color="#7C3AED" />
+              <Text style={styles.switchViewButtonText}>View All Users</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
-          data={Array.isArray(filteredUsers) ? filteredUsers : []}
+          data={filteredUsers}
           keyExtractor={(item, index) =>
-            item?.id ? item.id.toString() : index.toString()
+            item?.id ? String(item.id) : `user-${index}`
           }
-          renderItem={({ item }) =>
-            item && typeof item === "object" ? renderUserItem({ item }) : null
-          }
+          renderItem={renderUserItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -561,6 +651,41 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  viewModeContainer: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#FFF",
+    borderRadius: 14,
+    padding: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 1,
+  },
+  viewModeButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  viewModeButtonActive: {
+    backgroundColor: "#7C3AED",
+  },
+  viewModeText: {
+    fontFamily: "outfit",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  viewModeTextActive: {
+    color: "#FFF",
   },
   searchContainer: {
     flexDirection: "row",
@@ -711,6 +836,12 @@ const styles = StyleSheet.create({
     fontFamily: "outfit-bold",
     fontWeight: "700",
   },
+  noMessageText: {
+    fontFamily: "outfit",
+    fontSize: 13,
+    color: "#9CA3AF",
+    fontStyle: "italic",
+  },
   unreadBadge: {
     backgroundColor: "#7C3AED",
     minWidth: 22,
@@ -763,5 +894,21 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     lineHeight: 20,
+    marginBottom: 20,
+  },
+  switchViewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3E8FF",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  switchViewButtonText: {
+    fontFamily: "outfit",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#7C3AED",
   },
 });

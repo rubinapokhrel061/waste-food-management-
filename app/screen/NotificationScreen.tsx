@@ -1,6 +1,7 @@
 import { db } from "@/configs/FirebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
@@ -21,6 +22,7 @@ export default function NotificationScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  const router = useRouter();
   useEffect(() => {
     const q = query(collection(db, "foods"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(
@@ -31,6 +33,7 @@ export default function NotificationScreen() {
         snapshot.docs.forEach((doc) => {
           const data: any = { id: doc.id, ...doc.data() };
 
+          // Add creation notification
           newNotifications.push({
             id: `${doc.id}-created`,
             type: "created",
@@ -38,20 +41,39 @@ export default function NotificationScreen() {
             timestamp: data.createdAt,
           });
 
+          // Add status update notification with correct timestamp
           if (data.status && data.status !== "pending") {
+            let statusTimestamp = data.createdAt; // fallback
+
+            // Use the appropriate timestamp based on status
+            if (data.status === "accepted" && data.acceptedAt) {
+              statusTimestamp = data.acceptedAt;
+            } else if (data.status === "inTransit" && data.inTransitAt) {
+              statusTimestamp = data.inTransitAt;
+            } else if (data.status === "pickedUp" && data.pickedUpAt) {
+              statusTimestamp = data.pickedUpAt;
+            } else if (data.status === "donated" && data.donatedAt) {
+              statusTimestamp = data.donatedAt;
+            } else if (data.updatedAt) {
+              statusTimestamp = data.updatedAt;
+            }
+
             newNotifications.push({
               id: `${doc.id}-status`,
               type: "status",
               foodData: data,
-              timestamp: data.statusChangedAt || data.createdAt,
+              timestamp: statusTimestamp,
             });
           }
         });
+
+        // Sort by timestamp
         newNotifications.sort((a, b) => {
           const timeA = a.timestamp?.toDate?.() || new Date(0);
           const timeB = b.timestamp?.toDate?.() || new Date(0);
-          return timeB - timeA;
+          return timeB.getTime() - timeA.getTime();
         });
+
         setNotifications(newNotifications);
         setRefreshing(false);
       },
@@ -74,22 +96,49 @@ export default function NotificationScreen() {
         title: "New Food Available",
         message: `${item.foodData.foodName} has been added`,
         icon: "notifications-outline",
-        bgColor: "#DBEAFE",
-        accentColor: "#3B82F6",
+        bgColor: "#F3E8FF",
+        accentColor: "#9333EA",
         isIonicon: true,
       };
     } else {
       const statusConfig: any = {
-        accepted: { icon: "✅", bgColor: "#D1FAE5", accentColor: "#10B981" },
-        pickup: { icon: "🚗", bgColor: "#E0E7FF", accentColor: "#6366F1" },
-        donated: { icon: "🎉", bgColor: "#FCE7F3", accentColor: "#EC4899" },
-        rejected: { icon: "❌", bgColor: "#FEE2E2", accentColor: "#EF4444" },
+        pending: {
+          icon: "checkmark-circle-outline",
+          bgColor: "#F3E8FF",
+          accentColor: "#9333EA",
+          isIonicon: true,
+        },
+        accepted: {
+          icon: "hand-right-outline",
+          bgColor: "#DBEAFE",
+          accentColor: "#3B82F6",
+          isIonicon: true,
+        },
+        pickup: {
+          icon: "car-outline",
+          bgColor: "#FCE7F3",
+          accentColor: "#EC4899",
+          isIonicon: true,
+        },
+        inTransit: {
+          icon: "car-outline",
+          bgColor: "#FFF7ED",
+          accentColor: "#F59E0B",
+          isIonicon: true,
+        },
+        donated: {
+          icon: "heart-outline",
+          bgColor: "#D1FAE5",
+          accentColor: "#10B981",
+          isIonicon: true,
+        },
       };
 
       const config = statusConfig[item.foodData.status] || {
-        icon: "📦",
+        icon: "help-circle-outline",
         bgColor: "#F3F4F6",
         accentColor: "#6B7280",
+        isIonicon: true,
       };
       return {
         title: "Status Update",
@@ -128,7 +177,6 @@ export default function NotificationScreen() {
   const formatUseTime = (useTime: any) => {
     if (!useTime) return "";
 
-    // Handle Firestore timestamp object
     let date;
     if (useTime.toDate) {
       date = useTime.toDate();
@@ -214,6 +262,12 @@ export default function NotificationScreen() {
             <TouchableOpacity
               style={styles.notificationCard}
               activeOpacity={0.9}
+              onPress={() =>
+                router.push({
+                  pathname: "/screen/FoodDetailsScreen",
+                  params: { item: JSON.stringify(item.foodData) },
+                })
+              }
             >
               {/* Left Accent Bar */}
               <View

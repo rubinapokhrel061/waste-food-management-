@@ -1,4 +1,4 @@
-import { db } from "@/configs/FirebaseConfig";
+import { auth, db } from "@/configs/FirebaseConfig";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
@@ -21,7 +21,7 @@ interface Pickup {
   foodName: string;
   quantity: string | number;
   imageUrl: string;
-  status: "accepted" | "pickup" | "donated";
+  status: "accepted" | "inTransit" | "donated";
   createdAt?: any;
   ngoDetails?: {
     name: string;
@@ -48,6 +48,7 @@ interface Pickup {
 
 const PickupTrackingScreen: React.FC = () => {
   const router = useRouter();
+  const user = auth.currentUser;
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,9 +64,13 @@ const PickupTrackingScreen: React.FC = () => {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (!["accepted", "pickup", "donated"].includes(data.status)) return;
 
-        const status: "accepted" | "pickup" | "donated" = data.status;
+        // Updated to check for "inTransit" instead of "pickup"
+        if (!["accepted", "inTransit", "donated"].includes(data.status)) return;
+
+        if (data.ngoDetails?.uid !== user?.uid) return;
+
+        const status: "accepted" | "inTransit" | "donated" = data.status;
 
         fetchedPickups.push({
           id: doc.id,
@@ -82,6 +87,9 @@ const PickupTrackingScreen: React.FC = () => {
           location: data.location,
         });
       });
+
+      console.log("user", user);
+      console.log("filteredPickups", fetchedPickups);
 
       setPickups(fetchedPickups);
     } catch (err: any) {
@@ -112,10 +120,10 @@ const PickupTrackingScreen: React.FC = () => {
           progress: 33,
           step: 1,
         };
-      case "pickup":
+      case "inTransit": // Changed from "pickup"
         return {
           label: "In Transit",
-          color: "#EC4899",
+          color: "#F59E0B",
           bg: "#FCE7F3",
           icon: "car",
           progress: 66,
@@ -252,7 +260,7 @@ const PickupTrackingScreen: React.FC = () => {
           <View
             style={[
               styles.timelineConnector,
-              statusConfig.step >= 2 && { backgroundColor: "#EC4899" },
+              statusConfig.step >= 2 && { backgroundColor: "#F59E0B" },
             ]}
           />
 
@@ -260,7 +268,7 @@ const PickupTrackingScreen: React.FC = () => {
             <View
               style={[
                 styles.timelineIconWrapper,
-                statusConfig.step >= 2 && { backgroundColor: "#EC4899" },
+                statusConfig.step >= 2 && { backgroundColor: "#F59E0B" },
               ]}
             >
               <Ionicons
@@ -273,7 +281,7 @@ const PickupTrackingScreen: React.FC = () => {
               style={[
                 styles.timelineText,
                 statusConfig.step >= 2 && {
-                  color: "#EC4899",
+                  color: "#F59E0B",
                   fontWeight: "700",
                 },
               ]}
@@ -340,8 +348,8 @@ const PickupTrackingScreen: React.FC = () => {
           </View>
         )}
 
-        {item.status === "pickup" && item.pickupDetails && (
-          <View style={[styles.detailsBox, { borderLeftColor: "#EC4899" }]}>
+        {item.status === "inTransit" && item.pickupDetails && (
+          <View style={[styles.detailsBox, { borderLeftColor: "#F59E0B" }]}>
             <View style={styles.detailsHeader}>
               <View
                 style={[styles.detailsIcon, { backgroundColor: "#FCE7F3" }]}
@@ -349,7 +357,7 @@ const PickupTrackingScreen: React.FC = () => {
                 <MaterialIcons
                   name="delivery-dining"
                   size={16}
-                  color="#EC4899"
+                  color="#F59E0B"
                 />
               </View>
               <Text style={styles.detailsTitle}>Pickup In Progress</Text>
@@ -406,7 +414,15 @@ const PickupTrackingScreen: React.FC = () => {
           </View>
         )}
 
-        <TouchableOpacity style={styles.actionBtn}>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() =>
+            router.push({
+              pathname: "/screen/FoodDetailsScreen",
+              params: { item: JSON.stringify(item) },
+            })
+          }
+        >
           <Text style={styles.actionBtnText}>View Full Details</Text>
           <Ionicons name="arrow-forward-circle" size={20} color="#9333EA" />
         </TouchableOpacity>
@@ -418,12 +434,12 @@ const PickupTrackingScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#9333EA" />
-        <Text style={styles.loadingText}>Loading pickups...</Text>
+        <Text style={styles.loadingText}>Loading donations by status...</Text>
       </View>
     );
   }
 
-  const activeCount = pickups.filter((p) => p.status === "pickup").length;
+  const activeCount = pickups.filter((p) => p.status === "inTransit").length;
   const acceptedCount = pickups.filter((p) => p.status === "accepted").length;
   const completedCount = pickups.filter((p) => p.status === "donated").length;
 
@@ -434,9 +450,9 @@ const PickupTrackingScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Pickup Tracking</Text>
+          <Text style={styles.headerTitle}>Donation Status Report</Text>
           <Text style={styles.headerSubtitle}>
-            Monitor your active deliveries
+            View donations by their current progress
           </Text>
         </View>
         <TouchableOpacity style={styles.refreshBtn} onPress={fetchPickups}>
@@ -458,9 +474,9 @@ const PickupTrackingScreen: React.FC = () => {
 
         <View style={[styles.statCard, { backgroundColor: "#FCE7F3" }]}>
           <View style={styles.statIconWrapper}>
-            <MaterialIcons name="delivery-dining" size={24} color="#EC4899" />
+            <MaterialIcons name="delivery-dining" size={24} color="#F59E0B" />
           </View>
-          <Text style={[styles.statNumber, { color: "#EC4899" }]}>
+          <Text style={[styles.statNumber, { color: "#F59E0B" }]}>
             {activeCount}
           </Text>
           <Text style={styles.statLabel}>In Transit</Text>
@@ -473,7 +489,7 @@ const PickupTrackingScreen: React.FC = () => {
           <Text style={[styles.statNumber, { color: "#10B981" }]}>
             {completedCount}
           </Text>
-          <Text style={styles.statLabel}>Completed</Text>
+          <Text style={styles.statLabel}>Donated</Text>
         </View>
       </View>
 
@@ -522,20 +538,20 @@ const PickupTrackingScreen: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.filterChip,
-            filterStatus === "pickup" && {
+            filterStatus === "inTransit" && {
               backgroundColor: "#FCE7F3",
-              borderColor: "#EC4899",
+              borderColor: "#F59E0B",
             },
           ]}
-          onPress={() => setFilterStatus("pickup")}
+          onPress={() => setFilterStatus("inTransit")}
         >
-          {filterStatus === "pickup" && (
-            <MaterialIcons name="delivery-dining" size={14} color="#EC4899" />
+          {filterStatus === "inTransit" && (
+            <MaterialIcons name="delivery-dining" size={14} color="#F59E0B" />
           )}
           <Text
             style={[
               styles.filterChipText,
-              filterStatus === "pickup" && { color: "#EC4899" },
+              filterStatus === "inTransit" && { color: "#F59E0B" },
             ]}
           >
             In Transit ({activeCount})
@@ -561,7 +577,7 @@ const PickupTrackingScreen: React.FC = () => {
               filterStatus === "donated" && { color: "#10B981" },
             ]}
           >
-            Completed ({completedCount})
+            Donated ({completedCount})
           </Text>
         </TouchableOpacity>
       </View>
@@ -572,11 +588,11 @@ const PickupTrackingScreen: React.FC = () => {
           <View style={styles.emptyIconWrapper}>
             <MaterialIcons name="delivery-dining" size={48} color="#9333EA" />
           </View>
-          <Text style={styles.emptyText}>No Pickups Found</Text>
+          <Text style={styles.emptyText}>No Donatins Found</Text>
           <Text style={styles.emptySubtext}>
             {filterStatus === "all"
-              ? "No active pickups at the moment"
-              : `No ${filterStatus} pickups found`}
+              ? "No active donations at the moment"
+              : `No ${filterStatus} donations found`}
           </Text>
         </View>
       ) : (
@@ -633,7 +649,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: "800",
     color: "#FFF",
     marginBottom: 4,

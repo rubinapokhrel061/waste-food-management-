@@ -20,6 +20,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
@@ -112,6 +113,22 @@ export default function ChatDetailScreen() {
     return () => unsubscribe();
   }, [selectedUser.id]);
 
+  // Scroll to end when keyboard shows
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
   const sendMessage = async () => {
     if (!text.trim() || !currentUser) return;
 
@@ -125,6 +142,11 @@ export default function ChatDetailScreen() {
     });
 
     setText("");
+
+    // Scroll to end after sending
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const handleAttachment = () => {
@@ -354,7 +376,7 @@ export default function ChatDetailScreen() {
       </View>
       <Text style={styles.emptyTitle}>No messages yet</Text>
       <Text style={styles.emptySubtitle}>
-        Start the conversation by sending a message to {selectedUser.name}
+        {`Start the conversation by sending a message to ${selectedUser.name}`}
       </Text>
       <View style={styles.wavingHandContainer}>
         <Text style={styles.wavingHand}>👋</Text>
@@ -365,8 +387,8 @@ export default function ChatDetailScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <StatusBar barStyle="light-content" backgroundColor="#7C3AED" />
 
@@ -405,6 +427,7 @@ export default function ChatDetailScreen() {
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: true })
           }
+          onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
         />
       )}
 
@@ -453,6 +476,11 @@ export default function ChatDetailScreen() {
             style={styles.input}
             multiline
             maxLength={1000}
+            onFocus={() => {
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }, 100);
+            }}
           />
 
           <TouchableOpacity
@@ -485,7 +513,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#7C3AED",
     paddingTop: Platform.OS === "ios" ? 50 : 40,
-
     paddingBottom: 16,
     paddingHorizontal: 16,
     shadowColor: "#000",
@@ -539,6 +566,7 @@ const styles = StyleSheet.create({
   messagesList: {
     padding: 16,
     paddingBottom: 8,
+    flexGrow: 1,
   },
   messageWrapper: {
     flexDirection: "row",
@@ -646,6 +674,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    paddingBottom: Platform.OS === "ios" ? 24 : 12,
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
     shadowColor: "#000",

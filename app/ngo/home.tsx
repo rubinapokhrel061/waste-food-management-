@@ -1,13 +1,13 @@
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 
 import NGODashboardScreen from "../ngo/screen/NGODashboardScreen";
-import NearbyFoodScreen from "../ngo/screen/NearbyFoodScreen";
-import AssignPickupScreen from "./screen/DonationStatus";
-
 import ChatScreen from "../screen/ChatScreen";
+import FoodsScreen from "../screen/FoodsScreen";
 import ProfileScreen from "../screen/ProfileScreen";
+import DonationStatusScreen from "./screen/DonationStatus";
+
 export type NGOTabParamList = {
   Dashboard: undefined;
   Nearby: undefined;
@@ -38,6 +38,7 @@ export default function NgoHome() {
         },
       }}
     >
+      {/* 🏠 Dashboard */}
       <Tab.Screen
         name="Dashboard"
         component={NGODashboardScreen}
@@ -45,36 +46,47 @@ export default function NgoHome() {
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="dashboard" color={color} size={size} />
           ),
-        }}
-      />
-      <Tab.Screen
-        name="Nearby"
-        component={NearbyFoodScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="map" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Report"
-        component={AssignPickupScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="delivery-dining" color={color} size={size} />
-          ),
+          tabBarLabel: "Dashboard",
         }}
       />
 
+      {/* 📍 Nearby Foods */}
+      <Tab.Screen
+        name="Nearby"
+        component={FoodsScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="location" color={color} size={size} />
+          ),
+          tabBarLabel: "Nearby Foods",
+        }}
+      />
+
+      {/* 🚚 Manage Donation Status */}
+      <Tab.Screen
+        name="Report"
+        component={DonationStatusScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="hands-helping" color={color} size={size - 2} />
+          ),
+          tabBarLabel: "Donations Report",
+        }}
+      />
+
+      {/* 💬 Chat */}
       <Tab.Screen
         name="Chat"
         component={ChatScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble" color={color} size={size} />
+            <Ionicons name="chatbubble-ellipses" color={color} size={size} />
           ),
+          tabBarLabel: "Chat",
         }}
       />
+
+      {/* 👤 Profile */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
@@ -82,6 +94,7 @@ export default function NgoHome() {
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="person" color={color} size={size} />
           ),
+          tabBarLabel: "Profile",
         }}
       />
     </Tab.Navigator>

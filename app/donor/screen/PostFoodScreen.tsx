@@ -1,8 +1,10 @@
-import { auth, db } from "@/configs/FirebaseConfig";
+import { db } from "@/configs/FirebaseConfig";
+import { useUser } from "@/contexts/UserContext";
 import { getDistance } from "@/utils/dijkstra";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import { addDoc, collection, getDocs, Timestamp } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
@@ -47,6 +49,7 @@ export default function PostFoodScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const { user } = useUser();
 
   const [address, setAddress] = useState("");
   const [region, setRegion] = useState<any>(null);
@@ -61,7 +64,7 @@ export default function PostFoodScreen() {
   });
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [NGOs, setNGOs] = useState<User[]>([]);
-
+  const router = useRouter();
   useEffect(() => {
     fetchUsers();
     loadUserLocation();
@@ -84,7 +87,7 @@ export default function PostFoodScreen() {
   const loadUserLocation = async () => {
     try {
       setLocationLoading(true);
-      const user = auth.currentUser;
+
       if (user) {
         const querySnapshot = await getDocs(collection(db, "users"));
         const userData = querySnapshot.docs
@@ -230,8 +233,7 @@ export default function PostFoodScreen() {
     try {
       setLoading(true);
       const imageUrl = await uploadImageToCloudinary(imageUri!);
-      const user = auth.currentUser;
-      console.log(user);
+
       const foodRef = await addDoc(collection(db, "foods"), {
         foodName,
         description,
@@ -243,8 +245,17 @@ export default function PostFoodScreen() {
           uid: user?.uid || null,
           isAnonymous: user?.isAnonymous || false,
           email: user?.email || null,
+          name: user?.fullName || null,
         },
+        location: {
+          latitude: location?.latitude || null,
+          longitude: location?.longitude || null,
+          address: address || "Unknown address",
+        },
+        pickupGuidelines: pickupGuidelines || "",
+        status: "pending",
       });
+      console.log(foodRef);
       const nearestNGOs = getNearestNGOs(NGOs, location!).slice(0, 3);
       for (const ngo of nearestNGOs) {
         if (!ngo?.email) continue;
@@ -253,24 +264,30 @@ export default function PostFoodScreen() {
           subject: `New Food Donation Available: ${foodName}`,
           message: `<p>Hello ${ngo.fullName},</p>
                   <p>A donor has posted food for donation: <strong>${foodName}</strong>. Please check and confirm if you can accept it.</p>
-                  <p>Location: ${ngo.location?.address || "Not provided"}</p>`,
+                  <p>Location: ${address}</p>`,
         };
         try {
-          await fetch("http://localhost:8020/api/email/sendEmail", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+          await fetch(
+            "https://waste-food-backend-522q.onrender.com/api/email/sendEmail",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
         } catch (emailErr) {
           console.error(`Failed to send email to ${ngo.email}:`, emailErr);
         }
       }
+
       Alert.alert("Success", "Food shared successfully!");
       setFoodName("");
       setDescription("");
       setUseTime(null);
       setQuantity("");
       setImageUri(null);
+
+      setPickupGuidelines("");
       setErrors({
         foodName: "",
         quantity: "",
@@ -278,6 +295,7 @@ export default function PostFoodScreen() {
         useTime: "",
         location: "",
       });
+      router.push("/screen/FoodsScreen");
     } catch (err: any) {
       console.error("Submit error:", err);
       Alert.alert("Error", err.message || "Something went wrong.");
@@ -306,6 +324,33 @@ export default function PostFoodScreen() {
           </View>
           <Text style={styles.headerTitle}>Share Food</Text>
         </View>
+        <TouchableOpacity
+          style={styles.refreshBtn}
+          onPress={async () => {
+            // Clear all form fields
+            setFoodName("");
+            setQuantity("");
+            setDescription("");
+            setPickupGuidelines("");
+            setUseTime(null);
+            setImageUri(null);
+            setAddress("");
+            setRegion(null);
+            setErrors({
+              foodName: "",
+              quantity: "",
+              imageUri: "",
+              useTime: "",
+              location: "",
+            });
+            if (user?.role === "ngo") {
+              await loadUserLocation();
+            }
+            await fetchUsers();
+          }}
+        >
+          <Ionicons name="refresh" size={24} color="#9333EA" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -552,6 +597,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
     borderBottomColor: "#E9E7F5",
   },
   headerContent: {
@@ -571,6 +618,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: "#111827",
+  },
+  refreshBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   scrollView: {
     flex: 1,

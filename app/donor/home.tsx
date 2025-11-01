@@ -10,7 +10,7 @@ import FoodsScreen from "../screen/FoodsScreen";
 export type DonorTabParamList = {
   Dashboard: undefined;
   Post: undefined;
-  Active: undefined;
+  Foods: undefined;
   Chat: undefined;
   Profile: undefined;
 };
@@ -36,7 +36,7 @@ const DonorNavigator: React.FC = () => {
           > = {
             Dashboard: "home",
             Post: "add-circle",
-            Active: "time",
+            Foods: "time",
             Chat: "chatbubble",
             Profile: "person",
           };
@@ -52,7 +52,7 @@ const DonorNavigator: React.FC = () => {
     >
       <Tab.Screen name="Dashboard" component={DonorDashboardScreen} />
       <Tab.Screen name="Post" component={PostFoodScreen} />
-      <Tab.Screen name="Active" component={FoodsScreen} />
+      <Tab.Screen name="Foods" component={FoodsScreen} />
       <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
